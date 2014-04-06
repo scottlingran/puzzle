@@ -3,11 +3,7 @@ var Opcode = require('btc-opcode');
 var TX = require("btc-transaction");
 var sha256 = require('crypto-hashing').sha256;
 var Helloblock = require("helloblock-js");
-var Async = require("async");
-var BigInteger = require('bigi')
-
-var ECParams = require('ecurve-names')('secp256k1')
-var ECDSA = require('ecdsa')
+var Keypair = require("./keypair");
 
 var Puzzle = {};
 module.exports = Puzzle;
@@ -18,24 +14,19 @@ var Hashtype = {
   SIGHASH_ALL: 1
 }
 
-Puzzle.create = function(message, callback) {
+Puzzle.generate = function(message, value, callback) {
   Helloblock.Addresses.retrieveUnspents({
     addresses: [address]
   }, function(err, data) {
     if (err) return callback(err, null);
 
     var unspent = data.unspents[0]
-    var rawTxHex = Puzzle.buildTx(message, unspent)
-    debugger
-    return rawTxHex
+    var rawTxHex = Puzzle.buildTx(message, value, unspent)
+    callback(null, rawTxHex)
   })
 }
 
-Puzzle.redeem = function() {
-
-}
-
-Puzzle.buildTx = function(message, unspent) {
+Puzzle.buildTx = function(message, value, unspent) {
   var newTx = new TX.Transaction()
   // INPUT
   var input = new TX.TransactionIn({
@@ -51,49 +42,36 @@ Puzzle.buildTx = function(message, unspent) {
 
   // OUTPUT
   var output = new TX.TransactionOut({
-    value: "10000", // why string?
-    script: Puzzle.createScript(message)
+    value: value.toString(), // why string?
+    script: Puzzle.outputScript(message)
   })
 
   newTx.outs.push(output)
 
   // Signing
+  var keypair = new Keypair(privKey)
   var script = new Script(unspent.scriptPubKey)
   var unsignedTxHash = newTx.hashTransactionForSignature(script, 0, Hashtype.SIGHASH_ALL)
-  var inputScript = Puzzle.sign(unsignedTxHash, unspent)
-  newTx.ins[0].script = inputScript
+  var signature = keypair.sign(unsignedTxHash)
+  signature.push(Hashtype.SIGHASH_ALL);
+  var inputScript = Script.createInputScript(signature, keypair.pubkey);
+  newTx.ins[0].script = inputScript;
 
   // Serialize
-  var newTxBuffer = new Buffer(newTx.serialize())
-  var newTxHex = newTxBuffer.toString('hex')
-  return newTxHex
-
+  var newTxBuffer = new Buffer(newTx.serialize());
+  var newTxHex = newTxBuffer.toString('hex');
+  return newTxHex;
 }
 
-Puzzle.createScript = function(message) {
+Puzzle.outputScript = function(message) {
   var puzzleScript = new Script();
   var secretBytes = new Buffer(message, "utf8")
   var secretHash = sha256.x2(secretBytes, {
     out: 'bytes'
   });
 
-  puzzleScript.writeOp(Opcode.map.OP_SHA256);
+  puzzleScript.writeOp(Opcode.map.OP_HASH256);
   puzzleScript.writeBytes(secretHash);
   puzzleScript.writeOp(Opcode.map.OP_EQUAL);
   return puzzleScript
-}
-
-Puzzle.sign = function(unsignedTxHash) {
-  var ecdsa = new ECDSA(ECParams);
-  var privKeyBytes = new Buffer(privKey, 'hex')
-
-  var privKeyInt = BigInteger.fromByteArrayUnsigned(privKeyBytes.toJSON())
-
-  var pubPoint = ECParams.getG().multiply(privKeyInt)
-  var pubkey = pubPoint.getEncoded(false)
-  var signature = ecdsa.sign(unsignedTxHash, privKeyInt)
-  signature.push(Hashtype.SIGHASH_ALL);
-  var inputScript = Script.createInputScript(signature, pubkey);
-
-  return inputScript
 }
