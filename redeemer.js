@@ -34,7 +34,7 @@ Redeemer.generate = function(txHash, message, address, callback) {
 Redeemer.buildTx = function(message, address, unspent) {
 	var newTx = new TX.Transaction()
 
-	// INPUT
+	// Input
 	var input = new TX.TransactionIn({
 		sequence: 0xffffffff,
 		outpoint: {
@@ -46,7 +46,7 @@ Redeemer.buildTx = function(message, address, unspent) {
 
 	newTx.ins.push(input)
 
-	// OUTPUT
+	// Output
 	var output = new TX.TransactionOut({
 		value: unspent.value.toString(), // why string?
 		script: Script.createOutputScript(address, network)
@@ -62,13 +62,12 @@ Redeemer.buildTx = function(message, address, unspent) {
 	});
 
 	if (_.difference(unspentHash, secretHash).length !== 0) {
-		throw "input message does not match OP_HASH160 bytes"
+		throw "input message does not match OP_HASH256 <bytes>"
 	}
 
-	// Signing
-	var msgBuffer = new Buffer(message);
+	// 'Signing'
 	var inputScript = new Script();
-	inputScript.writeBytes(msgBuffer.toJSON())
+	inputScript.writeBytes(secretBytes.toJSON())
 	newTx.ins[0].script = inputScript;
 
 	// Serialize

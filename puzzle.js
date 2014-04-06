@@ -8,27 +8,26 @@ var Keypair = require("./keypair");
 var Puzzle = {};
 module.exports = Puzzle;
 
-var privKey = "f457f5c3ce39c5041935f047525e3d12d74a7a4ba7321393bf8167a465051b99"
-var address = "mpjuaPusdVC5cKvVYCFX94bJX1SNUY8EJo"
 var Hashtype = {
   SIGHASH_ALL: 1
 }
 
-Puzzle.generate = function(message, value, callback) {
+Puzzle.generate = function(privKey, message, value, callback) {
   Helloblock.Addresses.retrieveUnspents({
     addresses: [address]
   }, function(err, data) {
     if (err) return callback(err, null);
 
     var unspent = data.unspents[0]
-    var rawTxHex = Puzzle.buildTx(message, value, unspent)
+    var rawTxHex = Puzzle.buildTx(privKey, message, value, unspent)
     callback(null, rawTxHex)
   })
 }
 
-Puzzle.buildTx = function(message, value, unspent) {
+Puzzle.buildTx = function(privKey, message, value, unspent) {
   var newTx = new TX.Transaction()
-  // INPUT
+
+  // Input
   var input = new TX.TransactionIn({
     sequence: 0xffffffff,
     outpoint: {
@@ -40,7 +39,7 @@ Puzzle.buildTx = function(message, value, unspent) {
 
   newTx.ins.push(input)
 
-  // OUTPUT
+  // Output
   var output = new TX.TransactionOut({
     value: value.toString(), // why string?
     script: Puzzle.outputScript(message)
