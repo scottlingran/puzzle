@@ -1,0 +1,19 @@
+{
+  "name": "puzzle",
+  "version": "0.0.0",
+  "description": "Puzzle",
+  "main": "server.js",
+  "author": "Scott Li <scott@helloblock.io> (https://helloblock.io/)",
+  "license": "BSD-2-Clause",
+  "dependencies": {
+    "btc-script": "~0.1.4",
+    "btc-transaction": "~0.1.5",
+    "helloblock-js": "0.0.4",
+    "btc-opcode": "0.0.1",
+    "bigi": "~0.2.0",
+    "async": "~0.6.2",
+    "crypto-hashing": "~0.3.0",
+    "ecdsa": "~0.4.0",
+    "ecurve-names": "~0.3.0"
+  }
+}
